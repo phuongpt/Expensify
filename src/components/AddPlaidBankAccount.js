@@ -33,14 +33,8 @@ const propTypes = {
         /** Whether we are fetching the bank accounts from the API */
         loading: PropTypes.bool,
 
-        /** Error object */
-        error: PropTypes.shape({
-            /** Error message */
-            message: PropTypes.string,
-
-            /** Error title */
-            title: PropTypes.string,
-        }),
+        /** Error message */
+        error: PropTypes.string,
 
         /** List of accounts */
         accounts: PropTypes.arrayOf(PropTypes.shape({
@@ -49,9 +43,6 @@ const propTypes = {
 
             /** Name of account */
             addressName: PropTypes.string,
-
-            /** Has this account has already been added? */
-            alreadyExists: PropTypes.bool,
 
             /** Is the account a savings account? */
             isSavings: PropTypes.bool,
@@ -65,6 +56,9 @@ const propTypes = {
             /** last 4 digits of the account number */
             mask: PropTypes.string,
         })),
+
+        /** Plaid access token, used to then retrieve Assets and Balances */
+        plaidAccessToken: PropTypes.string,
     }),
 
     /** Fired when the user exits the Plaid flow */
@@ -85,6 +79,9 @@ const propTypes = {
     /** Should we require a password to create a bank account? */
     isPasswordRequired: PropTypes.bool,
 
+    /** Are we adding a withdrawal account? */
+    allowDebit: PropTypes.bool,
+
     ...withLocalizePropTypes,
 };
 
@@ -92,6 +89,7 @@ const defaultProps = {
     plaidLinkToken: '',
     plaidBankAccounts: {
         loading: false,
+        error: '',
     },
     onExitPlaid: () => {},
     onSubmit: () => {},
@@ -99,6 +97,7 @@ const defaultProps = {
     receivedRedirectURI: null,
     plaidLinkOAuthToken: '',
     isPasswordRequired: false,
+    allowDebit: false,
 };
 
 class AddPlaidBankAccount extends React.Component {
@@ -130,7 +129,7 @@ class AddPlaidBankAccount extends React.Component {
         }
 
         BankAccounts.clearPlaidBankAccountsAndToken();
-        BankAccounts.fetchPlaidLinkToken();
+        BankAccounts.openPlaidBankLogin(this.props.allowDebit);
     }
 
     componentWillUnmount() {
@@ -157,6 +156,13 @@ class AddPlaidBankAccount extends React.Component {
         if (this.props.receivedRedirectURI && this.props.plaidLinkOAuthToken) {
             return this.props.plaidLinkOAuthToken;
         }
+    }
+
+    /**
+     * @returns {String}
+     */
+    getPlaidAccessToken() {
+        return this.props.plaidBankAccounts.plaidAccessToken;
     }
 
     /**
@@ -189,6 +195,7 @@ class AddPlaidBankAccount extends React.Component {
             account,
             plaidLinkToken: this.getPlaidLinkToken(),
             password: this.state.password,
+            plaidAccessToken: this.getPlaidAccessToken(),
         });
     }
 
@@ -208,12 +215,17 @@ class AddPlaidBankAccount extends React.Component {
                         <ActivityIndicator color={themeColors.spinner} size="large" />
                     </View>
                 )}
+                {this.props.plaidBankAccounts.error ? (
+                    <Text style={[styles.formError, styles.mh5]}>
+                        {this.props.plaidBankAccounts.error}
+                    </Text>
+                ) : null}
                 {token && (
                     <PlaidLink
                         token={token}
                         onSuccess={({publicToken, metadata}) => {
                             Log.info('[PlaidLink] Success!');
-                            BankAccounts.fetchPlaidBankAccounts(publicToken, metadata.institution.name);
+                            BankAccounts.openPlaidBankAccountSelector(publicToken, metadata.institution.name, this.props.allowDebit);
                             this.setState({institution: metadata.institution});
                         }}
                         onError={(error) => {

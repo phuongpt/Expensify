@@ -138,7 +138,7 @@ function mergeParamsWithLocalACHData(data) {
 
     // If we are setting up a Plaid account replace the accountNumber with the unmasked number
     if (data.plaidAccountID) {
-        const unmaskedAccount = _.find(Plaid.getPlaidBankAccounts(), bankAccount => (
+        const unmaskedAccount = _.find(Plaid.getUnmaskedPlaidBankAccounts(), bankAccount => (
             bankAccount.plaidAccountID === data.plaidAccountID
         ));
         updatedACHData.accountNumber = unmaskedAccount.accountNumber;

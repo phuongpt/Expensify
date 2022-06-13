@@ -1,10 +1,9 @@
+import getPlaidLinkTokenParameters from '../getPlaidLinkTokenParameters';
 import Onyx from 'react-native-onyx';
 import Str from 'expensify-common/lib/str';
 import _ from 'underscore';
 import ONYXKEYS from '../../ONYXKEYS';
-import CONST from '../../CONST';
-import * as DeprecatedAPI from '../deprecatedAPI';
-import Growl from '../Growl';
+import * as API from '../API';
 import * as Localize from '../Localize';
 
 /**
@@ -12,7 +11,7 @@ import * as Localize from '../Localize';
  *
  * @private
  */
-let plaidBankAccounts = [];
+let unmaskedPlaidBankAccounts = [];
 let bankName = '';
 let plaidAccessToken = '';
 
@@ -20,7 +19,7 @@ let plaidAccessToken = '';
  * We clear these out of storage once we are done with them so the user must re-enter Plaid credentials upon returning.
  */
 function clearPlaidBankAccountsAndToken() {
-    plaidBankAccounts = [];
+    unmaskedPlaidBankAccounts = [];
     bankName = '';
     Onyx.set(ONYXKEYS.PLAID_BANK_ACCOUNTS, {});
     Onyx.set(ONYXKEYS.PLAID_LINK_TOKEN, null);
@@ -28,58 +27,51 @@ function clearPlaidBankAccountsAndToken() {
 
 /**
  * Gets the Plaid Link token used to initialize the Plaid SDK
+ * @param {Boolean} allowDebit
  */
-function fetchPlaidLinkToken() {
-    DeprecatedAPI.Plaid_GetLinkToken()
-        .then((response) => {
-            if (response.jsonCode !== 200) {
-                return;
-            }
-
-            Onyx.merge(ONYXKEYS.PLAID_LINK_TOKEN, response.linkToken);
-        });
+function openPlaidBankLogin(allowDebit) {
+    const params = getPlaidLinkTokenParameters();
+    params.allowDebit = allowDebit;
+    API.read('OpenPlaidBankLogin', params);
 }
 
 /**
  * @param {String} publicToken
  * @param {String} bank
+ * @param {Boolean} allowDebit
  */
-function fetchPlaidBankAccounts(publicToken, bank) {
+function openPlaidBankAccountSelector(publicToken, bank, allowDebit) {
     bankName = bank;
 
-    Onyx.merge(ONYXKEYS.PLAID_BANK_ACCOUNTS, {loading: true});
-    DeprecatedAPI.BankAccount_Get({
+    API.makeRequestWithSideEffects('OpenPlaidBankAccountSelector', {
         publicToken,
-        allowDebit: false,
+        allowDebit,
         bank,
-    })
-        .then((response) => {
-            if (response.jsonCode === 666 && response.title === CONST.BANK_ACCOUNT.PLAID.ERROR.TOO_MANY_ATTEMPTS) {
-                Onyx.merge(ONYXKEYS.REIMBURSEMENT_ACCOUNT, {isPlaidDisabled: true});
-            }
-
-            plaidAccessToken = response.plaidAccessToken;
-
-            // Filter out any accounts that already exist since they cannot be used again.
-            plaidBankAccounts = _.filter(response.accounts, account => !account.alreadyExists);
-
-            if (plaidBankAccounts.length === 0) {
-                Growl.error(Localize.translateLocal('bankAccount.error.noBankAccountAvailable'));
-            }
-
-            Onyx.merge(ONYXKEYS.PLAID_BANK_ACCOUNTS, {
-                error: {
-                    title: response.title,
-                    message: response.message,
-                },
+    }, {
+        optimisticData: [{
+            onyxMethod: 'merge',
+            key: ONYXKEYS.PLAID_BANK_ACCOUNTS,
+            value: {loading: true, error: ''},
+        }],
+        successData: [{
+            onyxMethod: 'merge',
+            key: ONYXKEYS.PLAID_BANK_ACCOUNTS,
+            value: {loading: false, error: ''},
+        }],
+        failureData: [{
+            onyxMethod: 'merge',
+            key: ONYXKEYS.PLAID_BANK_ACCOUNTS,
+            value: {
                 loading: false,
-                accounts: _.map(plaidBankAccounts, account => ({
-                    ...account,
-                    accountNumber: Str.maskPAN(account.accountNumber),
-                })),
-                bankName,
-            });
-        });
+                error: Localize.translateLocal('bankAccount.error.noBankAccountAvailable')
+            },
+        }]
+    }).then((response) => {
+        // Errors and bankAccounts to display are directly put in Onyx PHP side
+        // But we need to keep track of unmaskedAccountNumbers and plaidAccessToken here, so we can send them back to create the bank account
+        unmaskedPlaidBankAccounts = response.unmaskedAccountNumbers;
+        plaidAccessToken = response.plaidAccessToken;
+    });
 }
 
 /**
@@ -92,8 +84,8 @@ function getPlaidAccessToken() {
 /**
  * @returns {Array}
  */
-function getPlaidBankAccounts() {
-    return plaidBankAccounts;
+function getUnmaskedPlaidBankAccounts() {
+    return unmaskedPlaidBankAccounts;
 }
 
 /**
@@ -105,9 +97,9 @@ function getBankName() {
 
 export {
     clearPlaidBankAccountsAndToken,
-    fetchPlaidBankAccounts,
-    fetchPlaidLinkToken,
+    openPlaidBankAccountSelector,
+    openPlaidBankLogin,
     getPlaidAccessToken,
-    getPlaidBankAccounts,
+    getUnmaskedPlaidBankAccounts,
     getBankName,
 };

@@ -226,9 +226,9 @@ class BankAccountStep extends React.Component {
                             success
                             extraLarge
                         />
-                        {this.props.isPlaidDisabled && (
+                        {this.props.error && (
                             <Text style={[styles.formError, styles.mh5]}>
-                                {this.props.translate('bankAccount.error.tooManyAttempts')}
+                                {this.props.error}
                             </Text>
                         )}
                         <MenuItem
@@ -273,6 +273,7 @@ class BankAccountStep extends React.Component {
                         onExitPlaid={() => BankAccounts.setBankAccountSubStep(null)}
                         receivedRedirectURI={this.props.receivedRedirectURI}
                         plaidLinkOAuthToken={this.props.plaidLinkOAuthToken}
+                        allowDebit
                     />
                 )}
                 {subStep === CONST.BANK_ACCOUNT.SETUP_TYPE.MANUAL && (

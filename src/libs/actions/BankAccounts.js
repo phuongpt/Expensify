@@ -28,10 +28,10 @@ export {
     cancelResetFreePlanBankAccount,
 } from './ReimbursementAccount';
 export {
-    fetchPlaidBankAccounts,
+    openPlaidBankAccountSelector,
     clearPlaidBankAccountsAndToken,
-    fetchPlaidLinkToken,
-    getPlaidBankAccounts,
+    openPlaidBankLogin,
+    getUnmaskedPlaidBankAccounts,
     getBankName,
     getPlaidAccessToken,
 } from './Plaid';
@@ -47,20 +47,19 @@ export {
  * @param {Object} account
  * @param {String} password
  * @param {String} plaidLinkToken
+ * @param {String} plaidAccessToken
  */
 function addPersonalBankAccount(account, password, plaidLinkToken) {
     Onyx.merge(ONYXKEYS.REIMBURSEMENT_ACCOUNT, {loading: true});
-    const unmaskedAccount = _.find(Plaid.getPlaidBankAccounts(), bankAccount => (
-        bankAccount.plaidAccountID === account.plaidAccountID
-    ));
+
     DeprecatedAPI.BankAccount_Create({
-        accountNumber: unmaskedAccount.accountNumber,
-        addressName: unmaskedAccount.addressName,
+        accountNumber: account.accountNumber,
+        addressName: account.addressName,
         allowDebit: false,
         confirm: false,
-        isSavings: unmaskedAccount.isSavings,
+        isSavings: account.isSavings,
         password,
-        routingNumber: unmaskedAccount.routingNumber,
+        routingNumber: account.routingNumber,
         setupType: 'plaid',
         additionalData: JSON.stringify({
             useOnFido: false,
@@ -70,7 +69,7 @@ function addPersonalBankAccount(account, password, plaidLinkToken) {
             bankAccountInReview: null,
             currentStep: 'AccountOwnerInformationStep',
             bankName: Plaid.getBankName(),
-            plaidAccountID: unmaskedAccount.plaidAccountID,
+            plaidAccountID: account.plaidAccountID,
             ownershipType: '',
             acceptTerms: true,
             country: 'US',
