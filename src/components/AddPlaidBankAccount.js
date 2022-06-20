@@ -159,13 +159,6 @@ class AddPlaidBankAccount extends React.Component {
     }
 
     /**
-     * @returns {String}
-     */
-    getPlaidAccessToken() {
-        return this.props.plaidBankAccounts.plaidAccessToken;
-    }
-
-    /**
      * @returns {Boolean}
      */
     validate() {
@@ -195,7 +188,7 @@ class AddPlaidBankAccount extends React.Component {
             account,
             plaidLinkToken: this.getPlaidLinkToken(),
             password: this.state.password,
-            plaidAccessToken: this.getPlaidAccessToken(),
+            plaidAccessToken: this.props.plaidBankAccounts.plaidAccessToken,
         });
     }
 
@@ -215,11 +208,11 @@ class AddPlaidBankAccount extends React.Component {
                         <ActivityIndicator color={themeColors.spinner} size="large" />
                     </View>
                 )}
-                {this.props.plaidBankAccounts.error ? (
+                {this.props.plaidBankAccounts.error && (
                     <Text style={[styles.formError, styles.mh5]}>
                         {this.props.plaidBankAccounts.error}
                     </Text>
-                ) : null}
+                )}
                 {token && (
                     <PlaidLink
                         token={token}
@@ -308,9 +301,6 @@ export default compose(
         },
         plaidBankAccounts: {
             key: ONYXKEYS.PLAID_BANK_ACCOUNTS,
-        },
-        reimbursementAccount: {
-            key: ONYXKEYS.REIMBURSEMENT_ACCOUNT,
         },
     }),
 )(AddPlaidBankAccount);

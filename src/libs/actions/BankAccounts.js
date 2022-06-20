@@ -1,15 +1,14 @@
-import _ from 'underscore';
-import Onyx from 'react-native-onyx';
 import lodashGet from 'lodash/get';
 import CONST from '../../CONST';
 import * as DeprecatedAPI from '../deprecatedAPI';
+import * as API from '../API';
 import * as Plaid from './Plaid';
 import * as ReimbursementAccount from './ReimbursementAccount';
 import ONYXKEYS from '../../ONYXKEYS';
-import * as PaymentMethods from './PaymentMethods';
 import Growl from '../Growl';
 import * as Localize from '../Localize';
 import * as store from './ReimbursementAccount/store';
+import requireParameters from '../requireParameters';
 
 export {
     setupWithdrawalAccount,
@@ -49,10 +48,10 @@ export {
  * @param {String} plaidLinkToken
  * @param {String} plaidAccessToken
  */
-function addPersonalBankAccount(account, password, plaidLinkToken) {
-    Onyx.merge(ONYXKEYS.REIMBURSEMENT_ACCOUNT, {loading: true});
+function addPersonalBankAccount(account, password, plaidLinkToken, plaidAccessToken) {
+    const commandName = 'AddPersonalBankAccount';
 
-    DeprecatedAPI.BankAccount_Create({
+    const parameters = {
         accountNumber: account.accountNumber,
         addressName: account.addressName,
         allowDebit: false,
@@ -61,7 +60,7 @@ function addPersonalBankAccount(account, password, plaidLinkToken) {
         password,
         routingNumber: account.routingNumber,
         setupType: 'plaid',
-        additionalData: JSON.stringify({
+        additionalData: {
             useOnFido: false,
             policyID: '',
             plaidLinkToken,
@@ -75,27 +74,54 @@ function addPersonalBankAccount(account, password, plaidLinkToken) {
             country: 'US',
             currency: CONST.CURRENCY.USD,
             fieldsType: 'local',
-            plaidAccessToken: Plaid.getPlaidAccessToken(),
-        }),
-    })
-        .then((response) => {
-            if (response.jsonCode === 200) {
-                PaymentMethods.getPaymentMethods()
-                    .then(() => {
-                        PaymentMethods.continueSetup();
-                        Onyx.merge(ONYXKEYS.REIMBURSEMENT_ACCOUNT, {loading: false});
-                    });
-                return;
-            }
+            plaidAccessToken,
+        },
+    };
 
-            if (response.message === 'Incorrect Expensify password entered') {
-                ReimbursementAccount.setBankAccountFormValidationErrors({password: true});
-            }
-            Onyx.merge(ONYXKEYS.REIMBURSEMENT_ACCOUNT, {loading: false});
-        })
-        .catch(() => {
-            Onyx.merge(ONYXKEYS.REIMBURSEMENT_ACCOUNT, {loading: false});
-        });
+    requireParameters([
+        'accountNumber',
+        'addressName',
+        'isSavings',
+        'password',
+        'routingNumber',
+    ], parameters, commandName);
+
+    const onyxData = {
+        optimisticData: [
+            {
+                onyxMethod: 'merge',
+                key: ONYXKEYS.REIMBURSEMENT_ACCOUNT,
+                value: {
+                    loading: true,
+                    error: '',
+                },
+            },
+        ],
+        successData: [
+            {
+                onyxMethod: 'merge',
+                key: ONYXKEYS.REIMBURSEMENT_ACCOUNT,
+                value: {
+                    loading: false,
+                    error: '',
+                    success: 'Your bank account has been successfully added',
+                },
+            },
+        ],
+        failureData: [
+            {
+                onyxMethod: 'merge',
+                key: ONYXKEYS.REIMBURSEMENT_ACCOUNT,
+                value: {
+                    loading: false,
+                    error: 'aGenericErrorThatMightGetOverriddenByAServerOneIfItExistsInTheResponse',
+                },
+            },
+        ],
+    };
+    console.log('onyxData', onyxData);
+
+    API.write(commandName, parameters, onyxData);
 }
 
 /**

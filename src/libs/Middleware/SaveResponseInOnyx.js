@@ -13,6 +13,7 @@ function SaveResponseInOnyx(response, request) {
             if (_.has(responseData, 'onyxData')) {
                 const data = [];
                 if (responseData.jsonCode === 200) {
+                    console.log('200 successData', request.successData)
                     if (request.successData) {
                         data.push(...request.successData);
                     }

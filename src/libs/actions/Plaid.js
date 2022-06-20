@@ -1,7 +1,5 @@
-import getPlaidLinkTokenParameters from '../getPlaidLinkTokenParameters';
 import Onyx from 'react-native-onyx';
-import Str from 'expensify-common/lib/str';
-import _ from 'underscore';
+import getPlaidLinkTokenParameters from '../getPlaidLinkTokenParameters';
 import ONYXKEYS from '../../ONYXKEYS';
 import * as API from '../API';
 import * as Localize from '../Localize';
@@ -63,9 +61,9 @@ function openPlaidBankAccountSelector(publicToken, bank, allowDebit) {
             key: ONYXKEYS.PLAID_BANK_ACCOUNTS,
             value: {
                 loading: false,
-                error: Localize.translateLocal('bankAccount.error.noBankAccountAvailable')
+                error: Localize.translateLocal('bankAccount.error.noBankAccountAvailable'),
             },
-        }]
+        }],
     }).then((response) => {
         // Errors and bankAccounts to display are directly put in Onyx PHP side
         // But we need to keep track of unmaskedAccountNumbers and plaidAccessToken here, so we can send them back to create the bank account

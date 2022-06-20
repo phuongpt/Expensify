@@ -634,7 +634,6 @@ function Policy_Employees_Merge(parameters) {
  * @returns {Promise}
  */
 function BankAccount_Create(parameters) {
-    console.log('BankAccount_Create', parameters);
     const commandName = 'BankAccount_Create';
     requireParameters([
         'accountNumber',

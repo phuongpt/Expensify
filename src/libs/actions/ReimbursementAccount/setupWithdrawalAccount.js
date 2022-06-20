@@ -33,10 +33,7 @@ function getBankAccountListAndGoToValidateStep(updatedACHData) {
             });
             const bankAccount = new BankAccount(bankAccountJSON);
             const achData = bankAccount.toACHData();
-            const needsToPassLatestChecks = achData.state === BankAccount.STATE.OPEN
-                && achData.needsToPassLatestChecks;
-            achData.bankAccountInReview = needsToPassLatestChecks
-                || achData.state === BankAccount.STATE.VERIFYING;
+            achData.bankAccountInReview = achData.state === BankAccount.STATE.VERIFYING;
 
             navigation.goToWithdrawalAccountSetupStep(CONST.BANK_ACCOUNT.STEP.VALIDATION, achData);
             Onyx.merge(ONYXKEYS.REIMBURSEMENT_ACCOUNT, {loading: false});
@@ -204,7 +201,7 @@ function mergeParamsWithLocalACHData(data) {
  * @param {Array} [params.beneficialOwners]
  */
 function setupWithdrawalAccount(params) {
-    Onyx.merge(ONYXKEYS.REIMBURSEMENT_ACCOUNT, {loading: true, errorModalMessage: '', errors: null});
+    Onyx.merge(ONYXKEYS.REIMBURSEMENT_ACCOUNT, {loading: true, error: '', errors: null});
     const updatedACHData = mergeParamsWithLocalACHData(params);
     DeprecatedAPI.BankAccount_SetupWithdrawal(updatedACHData)
         .then((response) => {
