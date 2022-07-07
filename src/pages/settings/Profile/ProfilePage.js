@@ -81,7 +81,7 @@ class ProfilePage extends Component {
             selectedTimezone: lodashGet(props.myPersonalDetails.timezone, 'selected', CONST.DEFAULT_TIME_ZONE.selected),
             isAutomaticTimezone: lodashGet(props.myPersonalDetails.timezone, 'automatic', CONST.DEFAULT_TIME_ZONE.automatic),
             logins: this.getLogins(props.loginList),
-            avatar: {uri: lodashGet(this.props.myPersonalDetails, 'avatar', ReportUtils.getDefaultAvatar(this.props.myPersonalDetails.login))},
+            avatar: {uri: lodashGet(this.props.myPersonalDetails, 'avatar', this.defaultAvatar)},
             isAvatarChanged: false,
         };
 
@@ -155,7 +155,7 @@ class ProfilePage extends Component {
      * @param {Object} avatar
      */
     updateAvatar(avatar) {
-        this.setState({avatar: _.isUndefined(avatar) ? {uri: ReportUtils.getDefaultAvatar(this.props.myPersonalDetails.login)} : avatar, isAvatarChanged: true});
+        this.setState({avatar: _.isUndefined(avatar) ? {uri: this.defaultAvatar} : avatar, isAvatarChanged: true});
     }
 
     /**
@@ -215,7 +215,11 @@ class ProfilePage extends Component {
             && (this.props.myPersonalDetails.timezone.selected === this.state.selectedTimezone)
             && (this.props.myPersonalDetails.timezone.automatic === this.state.isAutomaticTimezone)
             && (this.props.myPersonalDetails.pronouns === this.state.pronouns.trim())
-            && (!this.state.isAvatarChanged || this.props.myPersonalDetails.avatarUploading);
+            /**
+            * Disable the button once one of the following conditions about avatar is true:
+            * avatar isn't changed -  avatar is being uploaded - the current avatar has just been removed but still not update new one
+            */
+            && (!this.state.isAvatarChanged || this.props.myPersonalDetails.avatarUploading || (this.state.isAvatarChanged && this.state.avatar?.uri === this.defaultAvatar));
 
         const pronounsPickerValue = this.state.hasSelfSelectedPronouns ? CONST.PRONOUNS.SELF_SELECT : this.state.pronouns;
 
